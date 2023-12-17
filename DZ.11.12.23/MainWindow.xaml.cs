@@ -6,6 +6,8 @@ namespace DZ._11._12._23
 
     public partial class MainWindow : Window
     {
+        static CancellationTokenSource cancelTokenSource;
+        CancellationToken token;
         List<Task> tasks = new List<Task>();
         List<string> strings = new List<string>();
         char[] delimiterChars = { '?', '!', '.' };
@@ -16,26 +18,29 @@ namespace DZ._11._12._23
 
         private async void analiz_Click(object sender, RoutedEventArgs e)
         {
+            cancelTokenSource = new CancellationTokenSource();
+            token = cancelTokenSource.Token;
             tester.Items.Clear();
+
             if (offers.IsChecked == true)
             {
                 tasks.Add(new Task(CountOffers));
             }
-            
+
             if (characters.IsChecked == true)
             {
                 tasks.Add(new Task(CountCharacters));
             }
-           
+
             if (words.IsChecked == true)
             {
                 tasks.Add(new Task(CountWords));
             }
-           
+
             if (interrogative.IsChecked == true)
             {
                 tasks.Add(new Task(CountInterrogativeOffers));
-            }           
+            }
             if (exclamatory.IsChecked == true)
             {
                 tasks.Add(new Task(CountExclamationOffers));
@@ -47,16 +52,19 @@ namespace DZ._11._12._23
             }
 
             await Task.WhenAll(tasks);
-            Input();
+            Task task1 = new Task(Input, token);
+            task1.Start();
+
+            await Task.WhenAll(task1);
             strings.Clear();
             tasks.Clear();
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
+            cancelTokenSource.Cancel();
+        }
 
-        }          
-     
 
         private void CountOffers()
         {
@@ -64,7 +72,7 @@ namespace DZ._11._12._23
             Dispatcher.Invoke(() => inpuTexts.SelectAll());
             Dispatcher.Invoke(() => { myText = inpuTexts.Selection.Text; });
             var res = myText.Split(delimiterChars).Select(x => x.Trim());
-            strings.Add($"Количество предложений в тексте: {myText.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).Count().ToString()}");           
+            strings.Add($"Количество предложений в тексте: {myText.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).Count().ToString()}");
         }
 
         private void CountInterrogativeOffers()
@@ -72,7 +80,7 @@ namespace DZ._11._12._23
             string myText = "";
             Dispatcher.Invoke(() => inpuTexts.SelectAll());
             Dispatcher.Invoke(() => { myText = inpuTexts.Selection.Text; });
-            strings.Add($"Количество вопросительных предложений  в тексте: {myText.Count(x => x=='?').ToString()}");
+            strings.Add($"Количество вопросительных предложений  в тексте: {myText.Count(x => x == '?').ToString()}");
         }
 
         private void CountExclamationOffers()
@@ -102,12 +110,17 @@ namespace DZ._11._12._23
 
         private void Input()
         {
-            if (monitor.IsChecked == true)
+            if (Dispatcher.Invoke(() => monitor.IsChecked == true))
             {
                 foreach (var s in strings)
                 {
+                    if (token.IsCancellationRequested)
+                    {
+                        Dispatcher.Invoke(() => tester.Items.Add("опеация отменена"));
+                        return;
+                    }
                     Thread.Sleep(3000);
-                    tester.Items.Add(s);
+                    Dispatcher.Invoke(() => tester.Items.Add(s));
                 }
             }
             if (file.IsChecked == true)

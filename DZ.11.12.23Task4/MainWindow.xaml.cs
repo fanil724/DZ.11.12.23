@@ -4,8 +4,6 @@ using WinForms = System.Windows.Forms;
 
 namespace DZ._11._12._23Task4
 {
-
-
     public partial class MainWindow : Window
     {
         List<string> strings = new List<string>();
